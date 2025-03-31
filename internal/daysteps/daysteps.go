@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"errors"
+	"github.com/Yandex-Practicum/go1fl-4-sprint-final/internal/spentcalories"
 )
 
 var (

@@ -1,3 +1,3 @@
-module github.com/Yandex-Practicum/go1fl-4-sprint-final
+module github.com/vuulpe/4th-sprint-final
 
 go 1.23.5

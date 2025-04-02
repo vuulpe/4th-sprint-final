@@ -1,6 +1,10 @@
 package spentcalories
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -12,7 +16,20 @@ const (
 )
 
 func parseTraining(data string) (int, string, time.Duration, error) {
-	// ваш код ниже
+	parts := strings.Split(data, ",") //Spliting the string into a slice of strings.
+	if len(parts) != 3 {              //Checking the slice length is 3
+		return 0, "", 0, errors.New("invalid format: eptected 3 components")
+	}
+	steps, err := strconv.Atoi(parts[0]) //converting steps into int
+	if err != nil {
+		return 0, "", 0, fmt.Errorf("error of step parsing") //error
+	}
+	duration, err := time.ParseDuration(parts[2]) //parsing duretion
+	if err != nil {
+		return 0, "", 0, fmt.Errorf("error of duration parsing") //error
+	}
+	activiti := parts[1]
+	return steps, activiti, duration, nil
 }
 
 // distance возвращает дистанцию(в километрах), которую преодолел пользователь за время тренировки.
@@ -21,7 +38,7 @@ func parseTraining(data string) (int, string, time.Duration, error) {
 //
 // steps int — количество совершенных действий (число шагов при ходьбе и беге).
 func distance(steps int) float64 {
-	// ваш код ниже
+	return float64(steps) * lenStep / mInKm
 }
 
 // meanSpeed возвращает значение средней скорости движения во время тренировки.
@@ -31,7 +48,15 @@ func distance(steps int) float64 {
 // steps int — количество совершенных действий(число шагов при ходьбе и беге).
 // duration time.Duration — длительность тренировки.
 func meanSpeed(steps int, duration time.Duration) float64 {
-	// ваш код ниже
+	if duration <= 0 {
+		return 0
+	}
+	dist := distance(steps)
+	hours := duration.Hours()
+	if hours == 0 {
+		return 0
+	}
+	return dist / hours
 }
 
 // ShowTrainingInfo возвращает строку с информацией о тренировке.
@@ -41,14 +66,31 @@ func meanSpeed(steps int, duration time.Duration) float64 {
 // data string - строка с данными.
 // weight, height float64 — вес и рост пользователя.
 func TrainingInfo(data string, weight, height float64) string {
-	// ваш код ниже
+	steps, activity, duration, err := parseTraining(data)
+	if err != nil {
+		return "ошибка парсинга данных"
+	}
+	distance := distance(steps)
+	speed := meanSpeed(steps, duration)
+	durationHours := duration.Hours()
+	var calories float64
+	switch strings.ToLower(activity) {
+	case "бег":
+		calories = RunningSpentCalories(steps, weight, duration)
+	case "ходьба":
+		calories = WalkingSpentCalories(steps, weight, height, duration)
+	default:
+		return "неизвестный тип тренировки"
+	}
+	return fmt.Sprintf(
+		"Тип тренировки: %s\nДлительность: %.2f ч.\nДистанция: %.2f км.\nСкорость: %.2f км/ч\nСожгли калорий: %.2f",
+		activity,
+		durationHours,
+		distance,
+		speed,
+		calories,
+	)
 }
-
-// Константы для расчета калорий, расходуемых при беге.
-const (
-	runningCaloriesMeanSpeedMultiplier = 18.0 // множитель средней скорости.
-	runningCaloriesMeanSpeedShift      = 20.0 // среднее количество сжигаемых калорий при беге.
-)
 
 // RunningSpentCalories возвращает количество потраченных колорий при беге.
 //
@@ -57,9 +99,20 @@ const (
 // steps int - количество шагов.
 // weight float64 — вес пользователя.
 // duration time.Duration — длительность тренировки.
-func RunningSpentCalories(steps int, weight float64, duration time.Duration) float64 {
-	// ваш код здесь
 
+const (
+	runningCaloriesMeanSpeedMultiplier = 18.0
+	runningCaloriesMeanSpeedShift      = 1.2
+)
+
+func RunningSpentCalories(steps int, weight float64, duration time.Duration) float64 {
+	speed := meanSpeed(steps, duration)
+	calories := ((runningCaloriesMeanSpeedMultiplier * speed) - runningCaloriesMeanSpeedShift) * weight
+
+	if calories < 0 {
+		return 0
+	}
+	return calories
 }
 
 // Константы для расчета калорий, расходуемых при ходьбе.
@@ -77,6 +130,7 @@ const (
 // weight float64 — вес пользователя.
 // height float64 — рост пользователя.
 func WalkingSpentCalories(steps int, weight, height float64, duration time.Duration) float64 {
-	// ваш код здесь
-
+	speed := meanSpeed(steps, duration)
+	spentCalories := (walkingCaloriesWeightMultiplier * weight) + (speed*speed/height)*float64(walkingSpeedHeightMultiplier)*float64(duration.Hours())*float64(minInH)
+	return spentCalories
 }
